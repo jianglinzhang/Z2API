@@ -2,10 +2,10 @@ name: Build and Push Docker Image
 
 on:
   push:
-    branches: [main, master, develop]
+    branches: [main, master, develop, docker]
     tags: ["v*"]
   pull_request:
-    branches: [main, master]
+    branches: [main, master, develop, docker]
 
 env:
   REGISTRY: ghcr.io
@@ -76,10 +76,10 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     # environment: production  # 如果需要使用GitHub环境，请先在仓库设置中创建
-    
+
     steps:
-    - name: Deploy to production
-      run: |
-        echo "部署到生产环境的步骤"
-        echo "可以在这里添加部署脚本或调用部署API"
-        echo "例如：kubectl apply -f k8s/ 或者调用云服务商的部署API"
+      - name: Deploy to production
+        run: |
+          echo "部署到生产环境的步骤"
+          echo "可以在这里添加部署脚本或调用部署API"
+          echo "例如：kubectl apply -f k8s/ 或者调用云服务商的部署API"
