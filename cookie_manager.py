@@ -124,6 +124,7 @@ class CookieManager:
                 return is_healthy
         except Exception as e:
             logger.debug(f"Health check failed for cookie {cookie[:20]}...: {e}")
+            logger.debug(f"Health check error type: {type(e).__name__}")
             return False
     
     async def periodic_health_check(self):
@@ -145,6 +146,7 @@ class CookieManager:
                 await asyncio.sleep(600)
             except Exception as e:
                 logger.error(f"Error in periodic health check: {e}")
+                logger.error(f"Periodic health check error type: {type(e).__name__}")
                 await asyncio.sleep(300)  # Wait 5 minutes on error
 
 # Global cookie manager instance
