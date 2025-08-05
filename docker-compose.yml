@@ -1,0 +1,59 @@
+version: "3.8"
+
+services:
+  z2api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: z2api-server
+    ports:
+      - "8000:8000"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - LOG_LEVEL=INFO
+      - API_KEY=${API_KEY:-sk-z2api-key-2024}
+      - Z_AI_COOKIES=${Z_AI_COOKIES}
+      - SHOW_THINK_TAGS=${SHOW_THINK_TAGS:-false}
+      - DEFAULT_STREAM=${DEFAULT_STREAM:-false}
+      - MAX_REQUESTS_PER_MINUTE=${MAX_REQUESTS_PER_MINUTE:-60}
+      - AUTO_REFRESH_TOKENS=${AUTO_REFRESH_TOKENS:-false}
+      - REFRESH_CHECK_INTERVAL=${REFRESH_CHECK_INTERVAL:-3600}
+    volumes:
+      # 可选：挂载日志目录
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - z2api-network
+
+  # 可选：添加Nginx反向代理
+  nginx:
+    image: nginx:alpine
+    container_name: z2api-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - z2api
+    restart: unless-stopped
+    networks:
+      - z2api-network
+    profiles:
+      - with-nginx
+
+networks:
+  z2api-network:
+    driver: bridge
+
+volumes:
+  logs:
+    driver: local
