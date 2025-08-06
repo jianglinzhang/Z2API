@@ -4,57 +4,6 @@
 
 > **💡 核心特性：** 支持流式和非流式两种响应模式，非流式模式下可选择性隐藏 AI 思考过程，提供更简洁的 API 响应。
 
-## ⚠️ 已知问题
-
-### 🌊 流式传输失败
-
-**问题描述：**
-目前流式传输功能存在稳定性问题，可能导致以下情况：
-
-- 流式响应中断或失败
-- 连接超时
-- 响应内容不完整
-
-**影响范围：**
-
-- 所有使用 `stream=true` 的请求
-- 实时交互场景
-
-**解决方案：**
-
-1. **使用非流式模式**（推荐）：
-
-   ```python
-   response = client.chat.completions.create(
-       model="GLM-4.5",
-       messages=[{"role": "user", "content": "你的问题"}],
-       stream=False  # 明确设置为非流式
-   )
-   ```
-
-2. **环境变量配置**：
-
-   ```env
-   DEFAULT_STREAM=false  # 确保默认使用非流式模式
-   ```
-
-3. **客户端配置**：
-   - 在 OpenAI SDK 中不设置 `stream` 参数或设置为 `false`
-   - 使用 cURL 时移除 `stream: true` 参数
-
-**临时修复：**
-如果必须使用流式传输，建议：
-
-- 减少请求内容长度
-- 增加超时时间设置
-- 实现重试机制
-
-**修复进度：**
-
-- 🔴 问题已确认
-- 🟡 正在调查原因
-- 🟢 预计下个版本修复
-
 ---
 
 ## ⚠️ 免责声明
@@ -62,6 +11,9 @@
 **此项目为纯粹研究交流学习性质，仅限自用，禁止对外提供服务或商用，避免对官方造成服务压力，否则风险自担！**
 
 ---
+
+## ⚠️ 已知问题
+
 ### 🔄 其他已知问题
 
 #### Request Error 错误
@@ -121,8 +73,18 @@ cp .env.example .env
 
 4. **启动服务器**
 
+**方式1：直接运行**
 ```bash
 python main.py
+```
+
+**方式2：Docker运行**
+```bash
+# 构建镜像
+docker build -t z2api .
+
+# 运行容器
+docker run -d -p 8000:8000 --env-file .env z2api
 ```
 
 服务器将在 `http://localhost:8000` 启动
@@ -253,7 +215,7 @@ for chunk in stream:
 系统支持两种响应模式，通过以下参数控制：
 
 ```env
-# 默认响应模式 (推荐设置为false，即非流式)
+# 默认响应模式 (推荐设置为true，即流式响应)
 DEFAULT_STREAM=false
 
 # 思考内容过滤 (仅对非流式响应生效)
@@ -276,16 +238,16 @@ SHOW_THINK_TAGS=false
 **推荐配置：**
 
 ```env
-# 推荐配置：默认非流式，隐藏思考过程
+# 推荐配置：默认流式响应，获得最佳体验
 DEFAULT_STREAM=false
 SHOW_THINK_TAGS=false
 ```
 
 这样配置可以：
 
-- 提供简洁的 API 响应（适合大多数应用场景）
-- 需要完整内容时可通过 `stream=true` 获取
-- 需要思考过程时可通过 `SHOW_THINK_TAGS=true` 开启
+- 提供实时的响应体验（适合大多数交互场景）
+- 需要简洁响应时可通过 `stream=false` 获取
+- 需要思考过程时可通过 `SHOW_THINK_TAGS=true` 开启（仅非流式）
 
 ### Cookie 池管理
 
@@ -420,8 +382,8 @@ echo "LOG_LEVEL=DEBUG" >> .env
 
 ## 📋 配置参数
 
-| 参数              | 描述            | 默认值              | 必需 |
-| ----------------- | --------------- | ------------------- | ---- |
+| 参数              | 描述            | 默认值                 | 必需 |
+| ----------------- | --------------- |---------------------| ---- |
 | `HOST`            | 服务器监听地址  | `0.0.0.0`           | 否   |
 | `PORT`            | 服务器端口      | `8000`              | 否   |
 | `API_KEY`         | 外部认证密钥    | `sk-z2api-key-2024` | 否   |
@@ -448,6 +410,160 @@ tail -f z2api.log
 # 找到进程ID并终止
 ps aux | grep "python main.py"
 kill <PID>
+```
+
+## 🐳 Docker 部署
+
+### 基本 Docker 部署
+
+1. **构建镜像**
+```bash
+docker build -t z2api .
+```
+
+2. **运行容器**
+```bash
+# 使用环境文件
+docker run -d \
+  --name z2api \
+  -p 8000:8000 \
+  --env-file .env \
+  z2api
+
+# 或者直接传递环境变量
+docker run -d \
+  --name z2api \
+  -p 8000:8000 \
+  -e API_KEY=sk-z2api-key-2024 \
+  -e Z_AI_COOKIES=your_token_here \
+  -e DEFAULT_STREAM=false \
+  -e SHOW_THINK_TAGS=false \
+  z2api
+```
+
+3. **查看状态**
+```bash
+# 查看容器状态
+docker ps
+
+# 查看日志
+docker logs z2api -f
+
+# 停止容器
+docker stop z2api
+
+# 删除容器
+docker rm z2api
+```
+
+### Docker Compose 部署
+
+创建 `docker-compose.yml` 文件：
+
+```yaml
+version: '3.8'
+
+services:
+  z2api:
+    build: .
+    container_name: z2api
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+```
+
+使用 Docker Compose：
+
+```bash
+# 启动服务
+docker-compose up -d
+
+# 查看日志
+docker-compose logs -f
+
+# 停止服务
+docker-compose down
+
+# 重启服务
+docker-compose restart
+```
+
+### 生产环境 Docker 部署
+
+**使用 Nginx 反向代理：**
+
+```yaml
+version: '3.8'
+
+services:
+  z2api:
+    build: .
+    container_name: z2api
+    env_file:
+      - .env
+    restart: unless-stopped
+    networks:
+      - z2api-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: z2api-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - z2api
+    restart: unless-stopped
+    networks:
+      - z2api-network
+
+networks:
+  z2api-network:
+    driver: bridge
+```
+
+**Nginx 配置示例 (`nginx.conf`)：**
+
+```nginx
+events {
+    worker_connections 1024;
+}
+
+http {
+    upstream z2api {
+        server z2api:8000;
+    }
+
+    server {
+        listen 80;
+        server_name your-domain.com;
+
+        location / {
+            proxy_pass http://z2api;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+
+            # 支持流式响应
+            proxy_buffering off;
+            proxy_cache off;
+            proxy_read_timeout 300s;
+            proxy_connect_timeout 75s;
+        }
+    }
+}
 ```
 
 ## 🤝 贡献
