@@ -47,7 +47,7 @@ services:
       - REFRESH_CHECK_INTERVAL=${REFRESH_CHECK_INTERVAL:-3600} # 刷新检查间隔(秒)
     volumes:
       # 可选：挂载日志目录
-      - ./logs:/app/logs
+      - logs:/app/logs
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
